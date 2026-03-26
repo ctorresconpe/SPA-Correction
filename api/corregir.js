@@ -17,30 +17,22 @@ REGLAS:
   RESUMEN: {"ortografia": N, "gramatica": N, "puntuacion": N, "estilo": N, "vocabulario": N}
   donde N es el número de errores encontrados de cada tipo.`;
 
-export default async function handler(req) {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json',
-  };
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers });
-  }
-
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
-  }
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { texto } = await req.json();
-
+    const { texto } = req.body;
     if (!texto || texto.trim().length === 0) {
-      return new Response(JSON.stringify({ error: 'El texto no puede estar vacío.' }), { status: 400, headers });
+      return res.status(400).json({ error: 'El texto no puede estar vacío.' });
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'API key no configurada.' });
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -60,17 +52,15 @@ export default async function handler(req) {
     if (!response.ok) {
       const err = await response.text();
       console.error('Anthropic error:', err);
-      return new Response(JSON.stringify({ error: 'Error al conectar con el servicio de corrección.' }), { status: 502, headers });
+      return res.status(502).json({ error: 'Error al conectar con el servicio de corrección.' });
     }
 
     const data = await response.json();
     const result = data.content.map(b => b.text || '').join('');
-    return new Response(JSON.stringify({ result }), { status: 200, headers });
+    return res.status(200).json({ result });
 
   } catch (err) {
     console.error('Error:', err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });
+    return res.status(500).json({ error: err.message });
   }
-}
-
-export const config = { runtime: 'edge' };
+};
