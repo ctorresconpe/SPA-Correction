@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corrector de Español</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --paper: #f5f0e8;
+    --paper-dark: #ede8d8;
+    --accent: #8b1a1a;
+    --accent-light: #c0392b;
+    --rule: #c8b99a;
+    --muted: #7a6f5e;
+    --col-ort: #FFD700;
+    --col-gram: #90EE90;
+    --col-pun: #00FFFF;
+    --col-est: #FF6B6B;
+    --col-voc: #FFA500;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--rule);
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  header h1 span { color: var(--accent); }
+  header p { margin-top: 8px; color: var(--muted); font-size: 0.95rem; letter-spacing: 0.4px; }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 24px; padding: 12px 16px;
+    background: var(--paper-dark);
+    border: 1px solid var(--rule); border-radius: 4px;
+  }
+  .legend-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); width: 100%; margin-bottom: 2px; }
+  .badge { font-size: 0.78rem; padding: 3px 10px; border-radius: 2px; font-weight: 600; color: var(--ink); }
+
+  .tabs { display: flex; border-bottom: 2px solid var(--rule); margin-bottom: 0; }
+  .tab {
+    padding: 10px 20px; font-size: 0.85rem; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    cursor: pointer; border: none; background: transparent;
+    color: var(--muted); border-bottom: 2px solid transparent;
+    margin-bottom: -2px; transition: color 0.2s, border-color 0.2s;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--ink); }
+
+  .panel { display: none; padding-top: 18px; }
+  .panel.active { display: block; }
+
+  textarea {
+    width: 100%; min-height: 240px; padding: 16px;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 1rem; font-weight: 300; line-height: 1.75;
+    background: #fff; color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 4px;
+    resize: vertical; outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: #bbb; }
+
+  .dropzone {
+    border: 2px dashed var(--rule); border-radius: 4px;
+    padding: 48px 20px; text-align: center; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s; background: #fff;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: #fdf9f4; }
+  .dropzone-icon { font-size: 2.2rem; margin-bottom: 10px; }
+  .dropzone p { color: var(--muted); font-size: 0.92rem; }
+  .dropzone p strong { color: var(--ink); }
+  .dropzone input { display: none; }
+  .file-name { margin-top: 10px; font-size: 0.84rem; color: var(--accent); font-weight: 600; display: none; }
+
+  .btn-row { margin-top: 14px; display: flex; gap: 10px; align-items: center; }
+  .btn {
+    padding: 10px 26px; font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.8px; border: none; border-radius: 3px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-light); }
+  .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-secondary { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .btn-secondary:hover { background: var(--accent); color: #fff; }
+  .char-count { margin-left: auto; font-size: 0.78rem; color: var(--muted); }
+
+  .loader { display: none; align-items: center; gap: 10px; color: var(--muted); font-size: 0.88rem; margin-top: 18px; }
+  .loader.show { display: flex; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--rule); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .result-box { display: none; margin-top: 26px; border-top: 2px solid var(--rule); padding-top: 22px; }
+  .result-box.show { display: block; }
+  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+  .result-header h2 { font-family: 'Playfair Display', serif; font-size: 1.25rem; }
+  .result-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .error-summary { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+  .error-count { font-size: 0.76rem; padding: 3px 10px; border-radius: 2px; font-weight: 600; color: var(--ink); }
+
+  .result-content {
+    background: #fff; border: 1px solid var(--rule); border-radius: 4px;
+    padding: 26px; font-size: 1rem; line-height: 1.85;
+    font-family: 'Source Sans 3', sans-serif; font-weight: 300;
+  }
+  .result-content p { margin-bottom: 0.85em; text-align: justify; }
+  .result-content .titulo { text-align: center; font-weight: 700; margin-bottom: 1em; }
+
+  .ORTOGRAFIA  { background: var(--col-ort); padding: 1px 2px; border-radius: 2px; }
+  .GRAMATICA   { background: var(--col-gram); padding: 1px 2px; border-radius: 2px; }
+  .PUNTUACION  { background: var(--col-pun); padding: 1px 2px; border-radius: 2px; }
+  .ESTILO      { background: var(--col-est); padding: 1px 2px; border-radius: 2px; }
+  .VOCABULARIO { background: var(--col-voc); padding: 1px 2px; border-radius: 2px; }
+
+  .error-msg { color: var(--accent); font-size: 0.88rem; margin-top: 12px; padding: 10px 14px; background: #fdf0f0; border: 1px solid #f5c6c6; border-radius: 4px; display: none; }
+  .error-msg.show { display: block; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 4px; font-size: 0.83rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.8rem; }
+    .result-actions { flex-direction: column; }
+    .btn-row { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Corrector de <span>Español</span></h1>
+    <p>Detección automática de errores ortográficos, gramaticales, de puntuación, estilo y vocabulario</p>
+  </header>
+
+  <div class="legend">
+    <div class="legend-title">Leyenda de errores</div>
+    <span class="badge" style="background:var(--col-ort)">Ortografía</span>
+    <span class="badge" style="background:var(--col-gram)">Gramática</span>
+    <span class="badge" style="background:var(--col-pun)">Puntuación</span>
+    <span class="badge" style="background:var(--col-est)">Estilo</span>
+    <span class="badge" style="background:var(--col-voc)">Vocabulario</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('texto')">✏️ Pegar texto</button>
+    <button class="tab" onclick="switchTab('archivo')">📄 Subir archivo</button>
+  </div>
+
+  <div class="panel active" id="panel-texto">
+    <textarea id="input-texto" placeholder="Pega aquí el texto que deseas corregir…" oninput="updateCount()"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="corregir('texto')" id="btn-texto">Corregir texto</button>
+      <button class="btn btn-secondary" onclick="limpiar()">Limpiar</button>
+      <span class="char-count" id="char-count">0 caracteres</span>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-archivo">
+    <div class="dropzone" id="dropzone"
+         ondragover="dragOver(event)" ondragleave="dragLeave()" ondrop="dropFile(event)"
+         onclick="document.getElementById('file-input').click()">
+      <div class="dropzone-icon">📂</div>
+      <p><strong>Haz clic para seleccionar</strong> o arrastra un archivo aquí</p>
+      <p style="margin-top:5px;font-size:0.82rem">Formatos aceptados: .txt, .docx</p>
+      <input type="file" id="file-input" accept=".txt,.docx">
+      <div class="file-name" id="file-name"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="corregir('archivo')" id="btn-archivo">Corregir archivo</button>
+    </div>
+  </div>
+
+  <div class="error-msg" id="error-msg"></div>
+
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <span id="loader-msg">Analizando el texto…</span>
+  </div>
+
+  <div class="result-box" id="result-box">
+    <div class="result-header">
+      <h2>Resultado de la corrección</h2>
+      <div class="result-actions">
+        <button class="btn btn-secondary" onclick="descargarHTML()">⬇ HTML</button>
+        <button class="btn btn-primary" onclick="descargarWord()">⬇ Word</button>
+      </div>
+    </div>
+    <div class="error-summary" id="error-summary"></div>
+    <div class="result-content" id="result-content"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let uploadedText = '';
+let resultHTML = '';
+
+// ── Tabs ───────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) =>
+    t.classList.toggle('active', (i === 0 && tab === 'texto') || (i === 1 && tab === 'archivo'))
+  );
+  document.getElementById('panel-texto').classList.toggle('active', tab === 'texto');
+  document.getElementById('panel-archivo').classList.toggle('active', tab === 'archivo');
+}
+
+// ── Helpers ────────────────────────────────────────────
+function updateCount() {
+  const n = document.getElementById('input-texto').value.length;
+  document.getElementById('char-count').textContent = n.toLocaleString('es') + ' caracteres';
+}
+
+function limpiar() {
+  document.getElementById('input-texto').value = '';
+  updateCount();
+  document.getElementById('result-box').classList.remove('show');
+  hideError();
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function hideError() {
+  document.getElementById('error-msg').classList.remove('show');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── File handling ──────────────────────────────────────
+function dragOver(e) { e.preventDefault(); document.getElementById('dropzone').classList.add('drag'); }
+function dragLeave() { document.getElementById('dropzone').classList.remove('drag'); }
+function dropFile(e) {
+  e.preventDefault(); dragLeave();
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+}
+
+let mammothReady = false;
+function loadMammoth() {
+  return new Promise((resolve, reject) => {
+    if (mammothReady) return resolve(window.mammoth);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    s.onload = () => { mammothReady = true; resolve(window.mammoth); };
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function handleFile(file) {
+  const nameEl = document.getElementById('file-name');
+  nameEl.textContent = '📄 ' + file.name;
+  nameEl.style.display = 'block';
+  hideError();
+
+  if (file.name.endsWith('.txt')) {
+    uploadedText = await file.text();
+    showToast('Archivo .txt cargado');
+  } else if (file.name.endsWith('.docx')) {
+    try {
+      const mammoth = await loadMammoth();
+      const buf = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer: buf });
+      uploadedText = result.value;
+      showToast('Texto extraído del .docx');
+    } catch (err) {
+      showError('No se pudo leer el archivo .docx. Intenta copiar el texto manualmente.');
+    }
+  } else {
+    showError('Formato no soportado. Usa .txt o .docx.');
+  }
+}
+
+document.getElementById('file-input').addEventListener('change', (e) => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+// ── Corrección ─────────────────────────────────────────
+const loaderMessages = [
+  'Analizando el texto…',
+  'Identificando errores ortográficos…',
+  'Revisando gramática y puntuación…',
+  'Preparando el resultado…',
+];
+
+async function corregir(source) {
+  hideError();
+  const texto = source === 'texto'
+    ? document.getElementById('input-texto').value.trim()
+    : uploadedText.trim();
+
+  if (!texto) { showError('Primero ingresa o carga un texto.'); return; }
+  if (texto.length > 20000) { showError('El texto supera el límite de 20.000 caracteres.'); return; }
+
+  document.getElementById('result-box').classList.remove('show');
+  const loader = document.getElementById('loader');
+  loader.classList.add('show');
+
+  const loaderMsg = document.getElementById('loader-msg');
+  loaderMsg.textContent = loaderMessages[0];
+  let msgIdx = 0;
+  const msgInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % loaderMessages.length;
+    loaderMsg.textContent = loaderMessages[msgIdx];
+  }, 2200);
+
+  const btnId = source === 'texto' ? 'btn-texto' : 'btn-archivo';
+  document.getElementById(btnId).disabled = true;
+
+  try {
+    const response = await fetch('/api/corregir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Error desconocido');
+    }
+
+    const raw = data.result;
+    const summaryMatch = raw.match(/RESUMEN:\s*(\{[^}]+\})/);
+    const htmlPart = raw.replace(/RESUMEN:.*$/s, '').trim();
+
+    resultHTML = htmlPart;
+    document.getElementById('result-content').innerHTML = htmlPart;
+
+    if (summaryMatch) {
+      try {
+        const counts = JSON.parse(summaryMatch[1]);
+        const types = [
+          ['ortografia',  'Ortografía',  'var(--col-ort)'],
+          ['gramatica',   'Gramática',   'var(--col-gram)'],
+          ['puntuacion',  'Puntuación',  'var(--col-pun)'],
+          ['estilo',      'Estilo',      'var(--col-est)'],
+          ['vocabulario', 'Vocabulario', 'var(--col-voc)'],
+        ];
+        const total = Object.values(counts).reduce((a, b) => a + b, 0);
+        const summary = document.getElementById('error-summary');
+        summary.innerHTML = total === 0
+          ? '<span style="color:var(--muted);font-size:0.84rem">✓ No se encontraron errores</span>'
+          : types
+              .filter(([k]) => counts[k] > 0)
+              .map(([k, label, col]) =>
+                `<span class="error-count" style="background:${col}">${label}: ${counts[k]}</span>`)
+              .join('');
+      } catch (e) { /* ignore parse error */ }
+    }
+
+    document.getElementById('result-box').classList.add('show');
+    document.getElementById('result-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch (err) {
+    showError('Error: ' + err.message);
+  } finally {
+    clearInterval(msgInterval);
+    loader.classList.remove('show');
+    document.getElementById(btnId).disabled = false;
+  }
+}
+
+// ── Descargas ──────────────────────────────────────────
+function buildFullHTML() {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.8; margin: 2.5cm; }
+  p { text-align: justify; margin-bottom: 0.8em; }
+  .titulo { text-align: center; font-weight: bold; }
+  .ref { margin-left: 2em; text-indent: -2em; }
+  .ORTOGRAFIA  { background-color: #FFD700; }
+  .GRAMATICA   { background-color: #90EE90; }
+  .PUNTUACION  { background-color: #00FFFF; }
+  .ESTILO      { background-color: #FF6B6B; }
+  .VOCABULARIO { background-color: #FFA500; }
+  .leyenda { margin-bottom: 1.5em; font-size: 10pt; border: 1px solid #ccc; padding: 8px; display: inline-block; }
+  .leyenda span { margin-right: 14px; padding: 2px 7px; }
+</style>
+</head>
+<body>
+<div class="leyenda">
+  <strong>Leyenda:</strong>
+  <span style="background:#FFD700;padding:2px 7px">Ortografía</span>
+  <span style="background:#90EE90;padding:2px 7px">Gramática</span>
+  <span style="background:#00FFFF;padding:2px 7px">Puntuación</span>
+  <span style="background:#FF6B6B;padding:2px 7px">Estilo</span>
+  <span style="background:#FFA500;padding:2px 7px">Vocabulario</span>
+</div>
+${resultHTML}
+</body>
+</html>`;
+}
+
+function descargarHTML() {
+  const blob = new Blob([buildFullHTML()], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'texto_corregido.html';
+  a.click();
+  showToast('HTML descargado');
+}
+
+function descargarWord() {
+  const blob = new Blob(['\ufeff' + buildFullHTML()], { type: 'application/msword' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'texto_corregido.doc';
+  a.click();
+  showToast('Archivo Word descargado');
+}
+</script>
+</body>
+</html>
