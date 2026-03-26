@@ -1,5 +1,3 @@
-export const config = { runtime: 'edge' };
-
 const SYSTEM_PROMPT = `Eres un corrector de español. Marca TODOS los errores del texto usando resaltado de colores en HTML. NUNCA cambies ninguna palabra: el texto dentro de las etiquetas debe ser idéntico al original.
 
 USA ESTAS CLASES CSS para el resaltado (solo el atributo class, sin estilos inline):
@@ -20,12 +18,6 @@ REGLAS:
   donde N es el número de errores encontrados de cada tipo.`;
 
 export default async function handler(req) {
-  // Only allow POST
-  if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
-  }
-
-  // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -33,35 +25,22 @@ export default async function handler(req) {
     'Content-Type': 'application/json',
   };
 
-  // Handle preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   }
 
   try {
     const { texto } = await req.json();
 
     if (!texto || texto.trim().length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'El texto no puede estar vacío.' }),
-        { status: 400, headers }
-      );
+      return new Response(JSON.stringify({ error: 'El texto no puede estar vacío.' }), { status: 400, headers });
     }
 
-    if (texto.length > 20000) {
-      return new Response(
-        JSON.stringify({ error: 'El texto supera el límite de 20.000 caracteres.' }),
-        { status: 400, headers }
-      );
-    }
-
-    const apiKey = (typeof process !== 'undefined' && process.env?.ANTHROPIC_API_KEY) || globalThis.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: 'API key no configurada.' }),
-        { status: 500, headers }
-      );
-    }
+    const apiKey = process.env.ANTHROPIC_API_KEY;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -81,22 +60,17 @@ export default async function handler(req) {
     if (!response.ok) {
       const err = await response.text();
       console.error('Anthropic error:', err);
-      return new Response(
-        JSON.stringify({ error: 'Error al conectar con el servicio de corrección.' }),
-        { status: 502, headers }
-      );
+      return new Response(JSON.stringify({ error: 'Error al conectar con el servicio de corrección.' }), { status: 502, headers });
     }
 
     const data = await response.json();
     const result = data.content.map(b => b.text || '').join('');
-
     return new Response(JSON.stringify({ result }), { status: 200, headers });
 
   } catch (err) {
-    console.error('Handler error:', err);
-    return new Response(
-      JSON.stringify({ error: 'Error interno del servidor.' }),
-      { status: 500, headers }
-    );
+    console.error('Error:', err);
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });
   }
 }
+
+export const config = { runtime: 'edge' };
